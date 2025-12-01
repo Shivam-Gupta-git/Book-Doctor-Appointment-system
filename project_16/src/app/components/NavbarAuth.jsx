@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { FaUser, FaSignOutAlt, FaUserShield, FaCalendarCheck } from "react-icons/fa";
+import { FaUser, FaSignOutAlt, FaUserShield, FaCalendarCheck, FaUserDoctor } from "react-icons/fa";
 import { FaRegUserCircle } from "react-icons/fa";
 
 export default function NavbarAuth() {
@@ -64,8 +64,8 @@ export default function NavbarAuth() {
     );
   }
 
-  // Show logout button and user info only when user/admin is logged in
-  if (user && (user.role === "user" || user.role === "admin")) {
+  // Show logout button and user info when user/admin/doctor is logged in
+  if (user && (user.role === "user" || user.role === "admin" || user.role === "doctor")) {
     return (
       <div className="flex items-center gap-4">
         <div className=" relative">
@@ -89,14 +89,26 @@ export default function NavbarAuth() {
           </Link>
         )}
 
-        <Link
-          href="/appointments"
-          className="flex items-center gap-2 px-3 py-1  bg-opacity-20 rounded-r-lg  text-white hover:bg-white hover:text-black duration-150"
-          title="My Appointments"
-        >
-          <FaCalendarCheck />
-          <span className="text-sm">Appointments</span>
-        </Link>
+        {user.role === "doctor" && (
+          <Link
+            href="/doctor/dashboard"
+            className="flex items-center gap-2 px-3 py-1  bg-opacity-20 rounded-r-lg  text-white hover:bg-white hover:text-black duration-150"
+          >
+            {/* <FaUserDoctor /> */}
+            <span className="text-sm">Doctor Dashboard</span>
+          </Link>
+        )}
+
+        {(user.role === "user" || user.role === "admin") && (
+          <Link
+            href="/appointments"
+            className="flex items-center gap-2 px-3 py-1  bg-opacity-20 rounded-r-lg  text-white hover:bg-white hover:text-black duration-150"
+            title="My Appointments"
+          >
+            <FaCalendarCheck />
+            <span className="text-sm">Appointments</span>
+          </Link>
+        )}
 
         <button
           onClick={handleLogout}

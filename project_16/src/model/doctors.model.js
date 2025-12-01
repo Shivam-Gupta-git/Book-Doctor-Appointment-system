@@ -69,6 +69,16 @@ const doctorDetailsScheem = new mongoose.Schema({
     type: Array,
     require: true,
   },
-},{minimize: false}
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    unique: true,
+    sparse: true,
+  },
+  timetable: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {},
+  },
+},{minimize: false, timestamps: true}
 )
 export const Doctordetails = mongoose.models.Doctordetails || mongoose.model("Doctordetails", doctorDetailsScheem)

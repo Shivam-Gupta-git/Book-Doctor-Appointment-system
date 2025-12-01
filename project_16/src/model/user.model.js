@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin"],
+      enum: ["user", "admin", "doctor"],
       default: "user",
     },
   },
@@ -58,4 +58,21 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-export const User = mongoose.models.User || mongoose.model("User", userSchema);
+// Get or create the User model
+// Check if model exists and if schema needs update
+let User;
+if (mongoose.models.User) {
+  User = mongoose.models.User;
+  // Update the enum if needed
+  const rolePath = User.schema.path('role');
+  if (rolePath && rolePath.enumValues && !rolePath.enumValues.includes('doctor')) {
+    // Schema needs update - delete and recreate
+    delete mongoose.models.User;
+    delete mongoose.modelSchemas.User;
+    User = mongoose.model("User", userSchema);
+  }
+} else {
+  User = mongoose.model("User", userSchema);
+}
+
+export { User };

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { FaCalendarAlt, FaFileMedical } from "react-icons/fa";
+import { FaCalendarAlt, FaFileMedical, FaClock } from "react-icons/fa";
 
 export default function BookAppointmentButton({ doctorId, doctorName }) {
   const router = useRouter();
@@ -10,11 +10,35 @@ export default function BookAppointmentButton({ doctorId, doctorName }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [timetable, setTimetable] = useState(null);
+  const [loadingTimetable, setLoadingTimetable] = useState(false);
   const [formData, setFormData] = useState({
     appointmentDate: "",
     reason: "",
     notes: "",
   });
+
+  // Fetch doctor's timetable when modal opens
+  useEffect(() => {
+    if (showModal && doctorId) {
+      fetchDoctorTimetable();
+    }
+  }, [showModal, doctorId]);
+
+  const fetchDoctorTimetable = async () => {
+    setLoadingTimetable(true);
+    try {
+      const response = await fetch(`/api/doctors/${doctorId}/timetable`);
+      const data = await response.json();
+      if (data.success && data.timetable) {
+        setTimetable(data.timetable);
+      }
+    } catch (error) {
+      console.error("Error fetching timetable:", error);
+    } finally {
+      setLoadingTimetable(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -121,7 +145,39 @@ export default function BookAppointmentButton({ doctorId, doctorName }) {
               </p>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Show doctor's today's timetable */}
+            {timetable && timetable.startTime && timetable.endTime && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <FaClock className="text-blue-600" />
+                  Today's Schedule
+                </p>
+                <p className="text-sm text-blue-700 mb-2">
+                  <span className="font-medium">Working Hours:</span> {timetable.startTime} - {timetable.endTime}
+                </p>
+                {timetable.slots && timetable.slots.length > 0 && (
+                  <div>
+                    <p className="text-xs text-blue-600 font-medium mb-1">Available Time Slots:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {timetable.slots.map((slot, index) => (
+                        <span
+                          key={index}
+                          className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded"
+                        >
+                          {slot}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {loadingTimetable && (
+              <div className="mb-4 text-sm text-gray-500">Loading doctor's schedule...</div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4 text-black">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <FaCalendarAlt className="inline mr-2" />

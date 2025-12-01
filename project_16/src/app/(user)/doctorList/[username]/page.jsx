@@ -268,6 +268,47 @@ const Doctor = async (props) => {
                     </div>
                   </div>
 
+                  {/* Today's Timetable */}
+                  {(() => {
+                    const today = new Date().toISOString().split("T")[0];
+                    const timetable = doctorData.timetable || {};
+                    const todayTimetable = timetable[today];
+                    
+                    if (todayTimetable && todayTimetable.startTime && todayTimetable.endTime) {
+                      return (
+                        <div>
+                          <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                            Today's Schedule
+                          </h3>
+                          <div className="space-y-2">
+                            <p className="text-gray-700">
+                              <span className="font-semibold">Working Hours:</span>{" "}
+                              {todayTimetable.startTime} - {todayTimetable.endTime}
+                            </p>
+                            {todayTimetable.slots && todayTimetable.slots.length > 0 && (
+                              <div>
+                                <p className="font-semibold text-gray-700 mb-2">
+                                  Available Time Slots:
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {todayTimetable.slots.map((slot, index) => (
+                                    <span
+                                      key={index}
+                                      className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                                    >
+                                      {slot}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   {/* Action Buttons */}
                   <div className="pt-4">
                     <BookAppointmentButton

@@ -11,6 +11,7 @@ import {
   FaSpinner,
 } from "react-icons/fa";
 import { FaUserDoctor } from "react-icons/fa6";
+import { Doctordetails } from "@/model/doctors.model";
 import CancelAppointmentButton from "@/app/components/CancelAppointmentButton";
 import RescheduleAppointmentButton from "@/app/components/RescheduleAppointmentButton";
 
@@ -74,11 +75,94 @@ export default async function MyAppointmentsPage() {
 
   await dataBase();
   let appointments = [];
+  const today = new Date().toISOString().split("T")[0];
+  
   try {
-    const rawData = await Appointment.find({ userId: currentUser.userId })
+    // Fetch appointments excluding cancelled ones
+    const rawData = await Appointment.find({ 
+      userId: currentUser.userId,
+      status: { $ne: "cancelled" } // Exclude cancelled appointments
+    })
       .populate("doctorId", "firstName lastName email phoneNumber department")
-      .sort({ createdAt: -1 });
+      .sort({ appointmentDate: 1, createdAt: -1 }); // Sort by appointment date
     appointments = JSON.parse(JSON.stringify(rawData));
+    
+    // Fetch doctor timetables for all appointments (show today's schedule)
+    // Use a map to avoid fetching the same doctor multiple times
+    const doctorTimetables = new Map();
+    
+    for (let appointment of appointments) {
+      if (appointment.doctorId) {
+        try {
+          // Get doctor ID - handle both populated object and direct ID
+          const doctorId = appointment.doctorId._id || appointment.doctorId;
+          const doctorIdStr = doctorId.toString();
+          
+          // Check if we already fetched this doctor's timetable
+          if (!doctorTimetables.has(doctorIdStr)) {
+            try {
+              // Use lean() to get plain JavaScript object directly
+              const doctor = await Doctordetails.findById(doctorId).select("timetable").lean();
+              if (doctor) {
+                // Timetable is stored as Mixed type, so it should be a plain object
+                const timetableObj = doctor.timetable || {};
+                
+                // Debug: Log the entire timetable structure
+                console.log(`Doctor ${doctorIdStr} timetable structure:`, {
+                  hasTimetable: !!doctor.timetable,
+                  timetableType: typeof doctor.timetable,
+                  timetableKeys: Object.keys(timetableObj),
+                  today: today,
+                  todayValue: timetableObj[today]
+                });
+                
+                // Get today's timetable
+                let todayTimetable = timetableObj[today] || null;
+                
+                // If timetable exists but is in a different format, try to normalize it
+                if (!todayTimetable && Object.keys(timetableObj).length > 0) {
+                  // Try to find the most recent timetable entry
+                  const dates = Object.keys(timetableObj).sort().reverse();
+                  if (dates.length > 0) {
+                    console.log(`No timetable for ${today}, but found entries for:`, dates);
+                  }
+                }
+                
+                // Validate timetable structure
+                if (todayTimetable) {
+                  if (!todayTimetable.startTime || !todayTimetable.endTime) {
+                    console.warn(`Timetable for ${today} is missing startTime or endTime:`, todayTimetable);
+                    todayTimetable = null;
+                  } else {
+                    console.log(`✓ Found valid timetable for doctor ${doctorIdStr} on ${today}:`, {
+                      startTime: todayTimetable.startTime,
+                      endTime: todayTimetable.endTime,
+                      slotsCount: todayTimetable.slots?.length || 0
+                    });
+                  }
+                } else {
+                  console.log(`✗ No timetable found for doctor ${doctorIdStr} on ${today}`);
+                }
+                
+                doctorTimetables.set(doctorIdStr, todayTimetable);
+              } else {
+                console.log(`✗ Doctor ${doctorIdStr} not found in database`);
+                doctorTimetables.set(doctorIdStr, null);
+              }
+            } catch (err) {
+              console.error(`Error fetching timetable for doctor ${doctorIdStr}:`, err);
+              doctorTimetables.set(doctorIdStr, null);
+            }
+          }
+          
+          // Attach timetable to appointment
+          appointment.doctorTimetable = doctorTimetables.get(doctorIdStr) || null;
+        } catch (error) {
+          console.error("Error processing appointment timetable:", error);
+          appointment.doctorTimetable = null;
+        }
+      }
+    }
   } catch (error) {
     console.error("Error fetching appointments:", error);
   }
@@ -174,7 +258,7 @@ export default async function MyAppointmentsPage() {
                       {/* Doctor Details */}
                       <td className="px-6 py-4">
                         {appointment.doctorId ? (
-                          <div className="space-y-1">
+                          <div className="space-y-2">
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                                 <FaUserDoctor className="text-green-600 text-xs" />
@@ -189,6 +273,45 @@ export default async function MyAppointmentsPage() {
                                 </p>
                               </div>
                             </div>
+                            {/* Show doctor's today's timetable */}
+                            {(() => {
+                              const timetable = appointment.doctorTimetable;
+                              if (timetable && timetable.startTime && timetable.endTime) {
+                                return (
+                                  <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                                    <p className="text-xs font-semibold text-blue-900 mb-1 flex items-center gap-1">
+                                      <FaClock className="text-blue-600" />
+                                      Today's Schedule
+                                    </p>
+                                    <p className="text-xs text-blue-700 mb-1">
+                                      <span className="font-medium">Hours:</span> {timetable.startTime} - {timetable.endTime}
+                                    </p>
+                                    {timetable.slots && Array.isArray(timetable.slots) && timetable.slots.length > 0 && (
+                                      <div className="mt-1">
+                                        <p className="text-xs text-blue-600 font-medium mb-1">Available Slots:</p>
+                                        <div className="flex flex-wrap gap-1">
+                                          {timetable.slots.map((slot, idx) => (
+                                            <span key={idx} className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded">
+                                              {slot}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              // Only show "No schedule" if we explicitly set it to null (meaning we checked and it doesn't exist)
+                              if (timetable === null) {
+                                return (
+                                  <div className="mt-2 text-xs text-gray-400 italic">
+                                    No schedule set for today
+                                  </div>
+                                );
+                              }
+                              // If undefined, don't show anything (might still be loading or error)
+                              return null;
+                            })()}
                           </div>
                         ) : (
                           <span className="text-sm text-gray-400">

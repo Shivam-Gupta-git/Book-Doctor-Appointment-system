@@ -94,6 +94,9 @@ export default async function ManageDoctorsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Experience
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Today's Schedule
+                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -135,6 +138,29 @@ export default async function ManageDoctorsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {doctor.experience} years
                       </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {(() => {
+                          const today = new Date().toISOString().split("T")[0];
+                          const timetable = doctor.timetable || {};
+                          const todayTimetable = timetable[today];
+                          
+                          if (todayTimetable && todayTimetable.startTime && todayTimetable.endTime) {
+                            return (
+                              <div className="space-y-1">
+                                <div className="font-semibold text-gray-700">
+                                  {todayTimetable.startTime} - {todayTimetable.endTime}
+                                </div>
+                                {todayTimetable.slots && todayTimetable.slots.length > 0 && (
+                                  <div className="text-xs text-gray-600">
+                                    {todayTimetable.slots.length} slot{todayTimetable.slots.length !== 1 ? 's' : ''} available
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+                          return <span className="text-gray-400 italic">Not set</span>;
+                        })()}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
                           <Link
@@ -159,7 +185,7 @@ export default async function ManageDoctorsPage() {
                 ) : (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan="7"
                       className="px-6 py-12 text-center text-gray-500"
                     >
                       <FaUserDoctor className="text-4xl mx-auto mb-4 text-gray-300" />

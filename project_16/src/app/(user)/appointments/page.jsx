@@ -87,8 +87,7 @@ export default async function MyAppointmentsPage() {
       .sort({ appointmentDate: 1, createdAt: -1 }); // Sort by appointment date
     appointments = JSON.parse(JSON.stringify(rawData));
     
-    // Fetch doctor timetables for all appointments (show today's schedule)
-    // Use a map to avoid fetching the same doctor multiple times
+
     const doctorTimetables = new Map();
     
     for (let appointment of appointments) {

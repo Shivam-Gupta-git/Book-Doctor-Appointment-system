@@ -8,8 +8,8 @@ const Navbar = () => {
       <div className=" flex items-center px-7 ">
         <Link href="/">
           <div className="flex flex-col items-center justify-center text-gray-800">
-          <FaUserDoctor className="text-4xl mt-2 "/>
-          <p className="text-[12px] font-bold">DOC</p>
+          <FaUserDoctor className="text-4xl mt-2 text-gray-200"/>
+          <p className="text-[12px] font-bold text-gray-200">DOC</p>
           </div>
         </Link>
       </div>
